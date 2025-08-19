@@ -1,25 +1,56 @@
-async function enviarScript(scriptText){
+async function enviarScript(scriptText) {
+    const lines = scriptText
+        .split(/[\n\t]+/)
+        .map(line => line.trim())
+        .filter(line => line);
 
-    const lines = scriptText.split(/[\n\t]+/).map(line => line.trim()).filter(line => line);
-    main = document.querySelector("#main"),
-    textarea = main.querySelector(`div[contenteditable="true"]`)
-    
-    if(!textarea) throw new Error("Não há uma conversa aberta")
-    
-    for(const line of lines){
-        console.log(line)
-    
-        textarea.focus();
-        document.execCommand('insertText', false, line);
-        textarea.dispatchEvent(new Event('change', {bubbles: true}));
-    
-        setTimeout(() => {
-            (main.querySelector(`[data-testid="send"]`) || main.querySelector(`[data-icon="send"]`)).click();
-        }, 100);
-        
-        if(lines.indexOf(line) !== lines.length - 1) await new Promise(resolve => setTimeout(resolve, 250));
+    const main = document.querySelector("#main");
+    if (!main) throw new Error("Não foi possível encontrar a área principal do WhatsApp");
+
+    const textarea = main.querySelector(`div[contenteditable="true"]`);
+    if (!textarea) throw new Error("Não há uma conversa aberta");
+
+    // Função para pegar o botão correto
+    function getSendButton() {
+        return main.querySelector('button[aria-label="Enviar"]');
     }
-    
+
+    function waitForSendButton(timeout = 5000) {
+        return new Promise((resolve, reject) => {
+            const interval = 100;
+            let elapsed = 0;
+
+            const timer = setInterval(() => {
+                const btn = getSendButton();
+                if (btn) {
+                    clearInterval(timer);
+                    resolve(btn);
+                } else {
+                    elapsed += interval;
+                    if (elapsed >= timeout) {
+                        clearInterval(timer);
+                        reject(new Error("Botão de enviar não apareceu dentro do tempo"));
+                    }
+                }
+            }, interval);
+        });
+    }
+
+    // Envia cada linha
+    for (const line of lines) {
+        console.log("Enviando:", line);
+
+        textarea.focus();
+        document.execCommand("insertText", false, line);
+        textarea.dispatchEvent(new InputEvent("input", { bubbles: true }));
+
+        const sendButton = await waitForSendButton();
+        sendButton.click();
+
+        // Pausa entre mensagens
+        await new Promise(resolve => setTimeout(resolve, 400));
+    }
+
     return lines.length;
 }
 
@@ -3701,4 +3732,4 @@ preto) Ah, isso é engraçado. Oh. Oh. Não posso
 respirar. Eu não consigo respirar.
 
 O FIM
-`).then(e => console.log(`Código finalizado, ${e} mensagens enviadas`)).catch(console.error)
+`).then(e => console.log(`Código finalizado`)).catch(console.error)
