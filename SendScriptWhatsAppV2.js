@@ -1,25 +1,46 @@
-async function enviarScript(scriptText){
-
+async function enviarScript(scriptText) {
     const lines = scriptText.split(/[\n\t]+/).map(line => line.trim()).filter(line => line);
-    main = document.querySelector("#main"),
-    textarea = main.querySelector(`div[contenteditable="true"]`)
-    
-    if(!textarea) throw new Error("Não há uma conversa aberta")
-    
-    for(const line of lines){
-        console.log(line)
-    
+
+    const main = document.querySelector("#main");
+    const textarea = main.querySelector(`div[contenteditable="true"]`);
+
+    if (!textarea) throw new Error("Não há uma conversa aberta");
+
+    for (const line of lines) {
+        console.log("Enviando:", line);
+
         textarea.focus();
-        document.execCommand('insertText', false, line);
-        textarea.dispatchEvent(new Event('change', {bubbles: true}));
-    
-        setTimeout(() => {
-            (main.querySelector(`[data-testid="send"]`) || main.querySelector(`[data-icon="send"]`)).click();
-        }, 100);
-        
-        if(lines.indexOf(line) !== lines.length - 1) await new Promise(resolve => setTimeout(resolve, 250));
+
+        // Insere o texto simulando colar
+        const dataTransfer = new DataTransfer();
+        dataTransfer.setData("text/plain", line);
+        const pasteEvent = new ClipboardEvent("paste", {
+            clipboardData: dataTransfer,
+            bubbles: true
+        });
+        textarea.dispatchEvent(pasteEvent);
+
+        textarea.dispatchEvent(new InputEvent("input", { bubbles: true }));
+
+        // Aguarda um pouco para garantir que o texto entrou
+        await new Promise(r => setTimeout(r, 150));
+
+        // Simula pressionar Enter para enviar
+        const enterEvent = new KeyboardEvent("keydown", {
+            bubbles: true,
+            cancelable: true,
+            key: "Enter",
+            code: "Enter",
+            keyCode: 13
+        });
+        textarea.dispatchEvent(enterEvent);
+
+        // Delay entre mensagens
+        if (lines.indexOf(line) !== lines.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 400));
+        }
     }
-    
+
     return lines.length;
 }
 
@@ -3701,4 +3722,4 @@ black) Oh, that's funny. Oh. Oh. I can't
 breathe. I can't breathe.
 
 THE END
-`).then(e => console.log(`Código finalizado, ${e} mensagens enviadas`)).catch(console.error)
+`).then(e => console.log(\`Código finalizado, \${e} mensagens enviadas\`)).catch(console.error);
