@@ -1,9 +1,13 @@
 async function enviarScript(scriptText) {
-    const lines = scriptText.split(/[\n\t]+/).map(line => line.trim()).filter(line => line);
+    const lines = scriptText
+        .replace(/\r/g, "")          // remove \r que pode dar erro
+        .replace(/\${/g, "\\${")     // escapa ${ para não virar JS
+        .split("\n")                 // quebra em linhas
+        .map(l => l.trim())          // tira espaços extras
+        .filter(l => l.length > 0);  // ignora linhas vazias
 
     const main = document.querySelector("#main");
     const textarea = main.querySelector(`div[contenteditable="true"]`);
-
     if (!textarea) throw new Error("Não há uma conversa aberta");
 
     for (const line of lines) {
@@ -11,7 +15,6 @@ async function enviarScript(scriptText) {
 
         textarea.focus();
 
-        // Insere o texto simulando colar
         const dataTransfer = new DataTransfer();
         dataTransfer.setData("text/plain", line);
         const pasteEvent = new ClipboardEvent("paste", {
@@ -19,13 +22,10 @@ async function enviarScript(scriptText) {
             bubbles: true
         });
         textarea.dispatchEvent(pasteEvent);
-
         textarea.dispatchEvent(new InputEvent("input", { bubbles: true }));
 
-        // Aguarda um pouco para garantir que o texto entrou
         await new Promise(r => setTimeout(r, 150));
 
-        // Simula pressionar Enter para enviar
         const enterEvent = new KeyboardEvent("keydown", {
             bubbles: true,
             cancelable: true,
@@ -35,28 +35,20 @@ async function enviarScript(scriptText) {
         });
         textarea.dispatchEvent(enterEvent);
 
-        // Delay entre mensagens
-        if (lines.indexOf(line) !== lines.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 400));
-        }
+        await new Promise(resolve => setTimeout(resolve, 400));
     }
-
     return lines.length;
 }
 
+// 👉 COLE o roteiro aqui entre as crases
 enviarScript(`
 SHREK
 
-Written by
-
-William Steig & Ted Elliott
-
-
-
+Written by William Steig & Ted Elliott
 
 SHREK
-Once upon a time there was a lovely 
-princess. But she had an enchantment 
+Once upon a time there was a lovely princess...
+ But she had an enchantment 
 upon her of a fearful sort which could 
 only be broken by love's first kiss. 
 She was locked away in a castle guarded 
@@ -3722,4 +3714,4 @@ black) Oh, that's funny. Oh. Oh. I can't
 breathe. I can't breathe.
 
 THE END
-`).then(e => console.log(\`Código finalizado, \${e} mensagens enviadas\`)).catch(console.error);
+`).then(e => console.log(`Código finalizado, ${e} mensagens enviadas`)).catch(console.error);
